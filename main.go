@@ -190,6 +190,34 @@ func printErr(err error) {
 }
 
 func main() {
+	var status bool = mainRoutine()
+	for (status == false) {
+		var yOrN string
+		input := &survey.Input{
+			Message: "Retry? (y/n):",
+		}
+		survey.AskOne(input, &yOrN, nil)
+		if(strings.TrimSpace(yOrN) == "y") {
+			status = mainRoutine()
+		} else {
+			exit()
+		}
+	}
+	if(status) {
+		var yOrN string
+		input := &survey.Input{
+			Message: "Send more files? (y/n):",
+		}
+		survey.AskOne(input, &yOrN, nil)
+		if(strings.TrimSpace(yOrN) == "y") {
+			main()
+		} else {
+			exit()
+		}
+	}
+}
+
+func mainRoutine() bool {
 	vid, pid := gousb.ID(0x057E), gousb.ID(0x3000)
 
 	usbCTX := gousb.NewContext()
@@ -199,7 +227,7 @@ func main() {
 
 	if err != nil || nxDevice == nil {
 		fmt.Println("Unable to open USB connection to Switch")
-		exit()
+		return false
 	}
 	fmt.Println("Connected to Switch")
 
@@ -207,19 +235,19 @@ func main() {
 	defer done()
 	if err != nil {
 		fmt.Printf("%s.DefaultInterface(): %v", nxDevice, err)
-		exit()
+		return false
 	}
 
 	epOut, err := intf.OutEndpoint(1)
 	if err != nil {
 		fmt.Println("Unable to open USB OUT endpoint [1]")
-		exit()
+		return false
 	}
 
 	epIn, err := intf.InEndpoint(1)
 	if err != nil {
 		fmt.Println("Unable to open USB IN endpoint [1]")
-		exit()
+		return false
 	}
 
 	nspDir := ""
@@ -227,11 +255,12 @@ func main() {
 		Message: "NSP Directory:",
 	}
 	survey.AskOne(input, &nspDir, nil)
+	nspDir = strings.TrimSpace(nspDir)
 
 	nspList, err := listNSPs(nspDir)
 	if err != nil {
 		printErr(err)
-		exit()
+		return false
 	}
 
 	selectedNSPs := []string{}
@@ -246,5 +275,5 @@ func main() {
 		pollCommands(epOut, epIn)
 	}
 
-	exit()
+	return true
 }
